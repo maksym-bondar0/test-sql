@@ -1,0 +1,42 @@
+CREATE VIEW junior_da_personal.user_behavioural_groups AS
+WITH
+   table_1 AS (
+     SELECT user_id,
+            COUNT(IF(type = "TV", object_id, null)) AS TV_watch,
+            COUNT(IF(type != "TV", object_id, null)) AS Other_watch,
+            ROUND(SUM(w_duration)/60/60, 2) AS w_duration_h,
+            COUNT(DISTINCT event_date) AS DEMO_days_group
+     FROM steam-crowbar-426915-v0.junior_da_personal.watching_data
+     WHERE w_duration > 30
+     GROUP BY user_id
+ )
+ , table_2 AS (
+      SELECT user_id,
+       CASE
+       WHEN TV_watch >= 1 AND Other_watch = 1 THEN "TV"
+       WHEN TV_watch = 0 AND Other_watch >= 1 THEN "VIDEO"
+       ELSE "TV+VIDEO"
+       END AS content_type_group,
+       CASE
+       WHEN w_duration_h <= 1 THEN "Less than 1 hour"
+       WHEN w_duration_h > 1 AND w_duration_h <= 10 THEN "1-10 hours"
+       WHEN w_duration_h > 10 AND w_duration_h <= 50 THEN "10-50 hours"
+       WHEN w_duration_h > 50 AND w_duration_h <= 100 THEN "50-100 hours"
+       WHEN w_duration_h > 100 AND w_duration_h <= 500 THEN "100-500 hours"
+       WHEN w_duration_h > 500 THEN "More than 500 hours"
+       ELSE "Other"
+       END AS w_hours_group,
+
+       CASE
+       WHEN DEMO_days_group = 1 THEN "Less than 1 day"
+       WHEN DEMO_days_group > 1 AND DEMO_days_group <= 7 THEN "1-7 days"
+       WHEN DEMO_days_group > 7 AND DEMO_days_group <= 14 THEN "7-14 days"
+       WHEN DEMO_days_group > 14 AND DEMO_days_group <= 30 THEN "14-30 days"
+       WHEN DEMO_days_group > 30 AND DEMO_days_group <= 60 THEN "30-60 days"
+       WHEN DEMO_days_group > 60 THEN "More than 60 days"
+       ELSE "Other"
+       END AS days_group
+      FROM table_1
+ )
+ SELECT *
+ FROM table_2;
